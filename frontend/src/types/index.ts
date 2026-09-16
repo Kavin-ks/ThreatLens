@@ -110,6 +110,35 @@ export interface FindingHistoryEntry {
   timestamp: string
 }
 
+export type RetestStatus = 'pending' | 'passed' | 'failed' | 'inconclusive'
+
+export interface RemediationRecord {
+  id: string
+  finding_id: string
+  description: string
+  applied_by: string | null
+  applied_at: string | null
+  patch_diff: string | null
+  retest_status: RetestStatus
+  retest_at: string | null
+  retest_notes: string | null
+  retest_scan_run_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface SecurityReport {
+  id: string
+  project_id: string
+  scan_run_id: string | null
+  title: string
+  format: string
+  generated_by: string | null
+  metadata_json: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface Finding {
   id: string
   project_id: string
@@ -132,6 +161,7 @@ export interface Finding {
   remediation: string | null
   evidence: Evidence[]
   history: FindingHistoryEntry[]
+  remediation_records: RemediationRecord[]
   created_at: string
   updated_at: string
 }

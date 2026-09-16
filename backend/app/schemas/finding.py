@@ -2,6 +2,19 @@ from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel
 from app.models.finding import Severity, Confidence, FindingStatus, SecurityCategory
+from app.models.remediation import RetestStatus
+
+
+class RemediationRecordSummary(BaseModel):
+    id: str
+    description: str
+    applied_by: Optional[str]
+    retest_status: str
+    retest_at: Optional[datetime]
+    retest_notes: Optional[str]
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
 
 
 class EvidenceResponse(BaseModel):
@@ -50,6 +63,7 @@ class FindingResponse(BaseModel):
     remediation: Optional[str]
     evidence: List[EvidenceResponse] = []
     history: List[FindingHistoryEntry] = []
+    remediation_records: List[RemediationRecordSummary] = []
     created_at: datetime
     updated_at: datetime
 

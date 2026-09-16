@@ -15,13 +15,15 @@ import {
   X,
   Loader2,
   AlertCircle,
+  FileDown,
+  FileText,
 } from 'lucide-react'
 import { TopBar } from '../components/layout/TopBar'
 import { SeverityBadge } from '../components/common/SeverityBadge'
 import { StatusBadge } from '../components/common/StatusBadge'
 import { ConfidenceBadge } from '../components/common/ConfidenceBadge'
 import { EmptyState } from '../components/common/EmptyState'
-import { projectsApi, scansApi, findingsApi } from '../api/endpoints'
+import { projectsApi, scansApi, findingsApi, reportsApi } from '../api/endpoints'
 import { formatRelative, formatDate } from '../lib/utils'
 import type { ScanStatus, Severity } from '../types'
 
@@ -52,7 +54,7 @@ function ScanStatusChip({ status }: { status: ScanStatus }) {
   )
 }
 
-type Tab = 'overview' | 'findings' | 'scans'
+type Tab = 'overview' | 'findings' | 'scans' | 'reports'
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>()
@@ -135,6 +137,7 @@ export default function ProjectDetail() {
     { key: 'overview', label: 'Overview' },
     { key: 'findings', label: `Findings (${findings.length})` },
     { key: 'scans',    label: `Scans (${scans.length})` },
+    { key: 'reports',  label: 'Reports' },
   ]
 
   return (
@@ -322,6 +325,11 @@ export default function ProjectDetail() {
         {activeTab === 'scans' && (
           <ScansTab projectId={id!} scans={scans} />
         )}
+
+        {/* ── REPORTS TAB ── */}
+        {activeTab === 'reports' && (
+          <ReportsTab projectId={id!} />
+        )}
       </div>
     </div>
   )
@@ -439,6 +447,114 @@ function FindingsTab({ projectId }: { projectId: string }) {
               ))}
             </tbody>
           </table>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Inline Reports Tab ───────────────────────────────────────────────────────
+
+function ReportsTab({ projectId }: { projectId: string }) {
+  const queryClient = useQueryClient()
+  const [generating, setGenerating] = useState(false)
+  const [genError, setGenError] = useState<string | null>(null)
+
+  const { data: reports = [], isLoading } = useQuery({
+    queryKey: ['reports', projectId],
+    queryFn: () => reportsApi.list(projectId),
+  })
+
+  const generateMutation = useMutation({
+    mutationFn: () => reportsApi.generate(projectId),
+    onSuccess: () => {
+      setGenerating(false)
+      queryClient.invalidateQueries({ queryKey: ['reports', projectId] })
+    },
+    onError: (err: Error) => {
+      setGenerating(false)
+      setGenError(err.message)
+    },
+  })
+
+  const handleGenerate = () => {
+    setGenError(null)
+    setGenerating(true)
+    generateMutation.mutate()
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-tl-text">Security Reports</h2>
+        <button
+          onClick={handleGenerate}
+          disabled={generating || generateMutation.isPending}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-tl-blue text-white text-xs font-medium hover:bg-blue-500 disabled:opacity-60 transition-colors"
+        >
+          {generating || generateMutation.isPending ? (
+            <Loader2 size={12} className="animate-spin" />
+          ) : (
+            <FileText size={12} />
+          )}
+          Generate PDF Report
+        </button>
+      </div>
+
+      {genError && (
+        <div className="flex items-start gap-2 px-4 py-3 rounded-lg bg-red-500 bg-opacity-10 border border-red-500 border-opacity-30 text-sm text-red-400">
+          <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
+          <span className="text-xs">{genError}</span>
+          <button onClick={() => setGenError(null)} className="ml-auto"><X size={13} /></button>
+        </div>
+      )}
+
+      <div className="bg-tl-surface border border-tl-border rounded-lg overflow-hidden">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 size={16} className="animate-spin text-tl-muted" />
+          </div>
+        ) : reports.length === 0 ? (
+          <EmptyState
+            icon={FileText}
+            title="No reports yet"
+            description='Click "Generate PDF Report" to create a professional security assessment report.'
+          />
+        ) : (
+          <div className="divide-y divide-tl-border">
+            {reports.map((report) => {
+              const meta = report.metadata_json
+                ? (() => { try { return JSON.parse(report.metadata_json) } catch { return null } })()
+                : null
+              return (
+                <div key={report.id} className="flex items-center gap-4 px-4 py-3">
+                  <FileText size={15} className="text-tl-muted flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium text-tl-text2 truncate">{report.title}</div>
+                    <div className="flex items-center gap-2 text-[10px] text-tl-muted mt-0.5">
+                      <span>{formatDate(report.created_at)}</span>
+                      {meta?.finding_count != null && (
+                        <>
+                          <span>·</span>
+                          <span>{meta.finding_count} finding{meta.finding_count !== 1 ? 's' : ''}</span>
+                        </>
+                      )}
+                      <span>·</span>
+                      <span className="uppercase font-mono">{report.format}</span>
+                    </div>
+                  </div>
+                  <a
+                    href={reportsApi.downloadUrl(projectId, report.id)}
+                    download
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-tl-border text-xs text-tl-text2 hover:bg-tl-surface2 hover:border-tl-blue transition-colors"
+                  >
+                    <FileDown size={12} />
+                    Download
+                  </a>
+                </div>
+              )
+            })}
+          </div>
         )}
       </div>
     </div>

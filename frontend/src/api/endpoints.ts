@@ -7,6 +7,8 @@ import type {
   Finding,
   ScanRun,
   ScannerInfo,
+  SecurityReport,
+  RemediationRecord,
   HealthStatus,
 } from '../types'
 
@@ -67,6 +69,40 @@ export const findingsApi = {
     api
       .patch<Finding>(`/projects/${projectId}/findings/${findingId}/status`, { status, note })
       .then((r) => r.data),
+  validate: (projectId: string, findingId: string, confidence: string, note?: string) =>
+    api
+      .post<Finding>(`/projects/${projectId}/findings/${findingId}/validate`, { confidence, note })
+      .then((r) => r.data),
+  listRemediation: (projectId: string, findingId: string) =>
+    api
+      .get<RemediationRecord[]>(`/projects/${projectId}/findings/${findingId}/remediation`)
+      .then((r) => r.data),
+  createRemediation: (
+    projectId: string,
+    findingId: string,
+    data: { description: string; applied_by?: string; patch_diff?: string }
+  ) =>
+    api
+      .post<RemediationRecord>(`/projects/${projectId}/findings/${findingId}/remediation`, data)
+      .then((r) => r.data),
+  retest: (projectId: string, findingId: string, remediationId: string, notes?: string) =>
+    api
+      .post<{ retest_status: string; notes: string; remediation_id: string }>(
+        `/projects/${projectId}/findings/${findingId}/remediation/${remediationId}/retest`,
+        { notes }
+      )
+      .then((r) => r.data),
+}
+
+// ─── Reports ──────────────────────────────────────────────────────────────────
+
+export const reportsApi = {
+  list: (projectId: string) =>
+    api.get<SecurityReport[]>(`/projects/${projectId}/reports`).then((r) => r.data),
+  generate: (projectId: string, data?: { scan_run_id?: string; title?: string }) =>
+    api.post<SecurityReport>(`/projects/${projectId}/reports`, data ?? {}).then((r) => r.data),
+  downloadUrl: (projectId: string, reportId: string) =>
+    `/api/v1/projects/${projectId}/reports/${reportId}/download`,
 }
 
 // ─── Scanners ─────────────────────────────────────────────────────────────────

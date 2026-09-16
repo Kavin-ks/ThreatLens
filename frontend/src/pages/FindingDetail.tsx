@@ -14,24 +14,31 @@ import {
   Clock,
   ChevronRight,
   ChevronDown,
+  CheckCircle2,
+  XCircle,
+  RefreshCw,
+  PlusCircle,
+  RotateCcw,
 } from 'lucide-react'
 import { TopBar } from '../components/layout/TopBar'
 import { SeverityBadge } from '../components/common/SeverityBadge'
 import { ConfidenceBadge } from '../components/common/ConfidenceBadge'
 import { StatusBadge } from '../components/common/StatusBadge'
 import { findingsApi } from '../api/endpoints'
-import { formatDate } from '../lib/utils'
-import type { Evidence, FindingHistoryEntry, FindingStatus } from '../types'
+import { formatDate, formatRelative } from '../lib/utils'
+import type { Evidence, FindingHistoryEntry, FindingStatus, Confidence, RemediationRecord } from '../types'
 
 const FINDING_STATUSES: FindingStatus[] = [
-  'DETECTED',
-  'VALIDATING',
-  'CONFIRMED',
-  'REJECTED',
-  'REMEDIATION',
-  'RETESTING',
-  'RESOLVED',
+  'DETECTED', 'VALIDATING', 'CONFIRMED', 'REJECTED', 'REMEDIATION', 'RETESTING', 'RESOLVED',
 ]
+const CONFIDENCE_LEVELS: Confidence[] = ['CONFIRMED', 'LIKELY', 'POSSIBLE', 'FALSE_POSITIVE']
+
+const RETEST_STATUS_CONFIG: Record<string, { label: string; cls: string; icon: React.ComponentType<any> }> = {
+  pending:      { label: 'Pending',      cls: 'text-tl-muted',    icon: Clock },
+  passed:       { label: 'Passed',       cls: 'text-emerald-400', icon: CheckCircle2 },
+  failed:       { label: 'Failed',       cls: 'text-red-400',     icon: XCircle },
+  inconclusive: { label: 'Inconclusive', cls: 'text-yellow-400',  icon: AlertCircle },
+}
 
 // ─── Evidence viewer ──────────────────────────────────────────────────────────
 
@@ -128,11 +135,7 @@ function EvidenceCard({ evidence }: { evidence: Evidence }) {
         <span className="text-[10px] text-tl-muted font-mono px-1.5 py-0.5 bg-tl-surface2 rounded border border-tl-border">
           {evidence.evidence_type}
         </span>
-        {expanded ? (
-          <ChevronDown size={13} className="text-tl-muted" />
-        ) : (
-          <ChevronRight size={13} className="text-tl-muted" />
-        )}
+        {expanded ? <ChevronDown size={13} className="text-tl-muted" /> : <ChevronRight size={13} className="text-tl-muted" />}
       </button>
 
       {expanded && evidence.content && (
@@ -158,16 +161,16 @@ function EvidenceCard({ evidence }: { evidence: Evidence }) {
 // ─── History timeline ─────────────────────────────────────────────────────────
 
 function HistoryTimeline({ history }: { history: FindingHistoryEntry[] }) {
-  const sorted = [...history].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+  const sorted = [...history].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  )
   return (
     <div className="space-y-3">
       {sorted.map((entry, i) => (
         <div key={entry.id} className="flex gap-3">
           <div className="flex flex-col items-center">
             <div className="w-2 h-2 rounded-full bg-tl-blue mt-1.5 flex-shrink-0" />
-            {i < sorted.length - 1 && (
-              <div className="w-px flex-1 bg-tl-border mt-1" />
-            )}
+            {i < sorted.length - 1 && <div className="w-px flex-1 bg-tl-border mt-1" />}
           </div>
           <div className="flex-1 pb-3">
             <div className="flex items-center gap-2 flex-wrap">
@@ -180,13 +183,106 @@ function HistoryTimeline({ history }: { history: FindingHistoryEntry[] }) {
               <span className="text-xs font-medium text-tl-text2">{entry.to_status}</span>
               <span className="text-xs text-tl-muted">by {entry.changed_by}</span>
             </div>
-            {entry.note && (
-              <p className="text-xs text-tl-muted mt-0.5 italic">"{entry.note}"</p>
-            )}
+            {entry.note && <p className="text-xs text-tl-muted mt-0.5 italic">"{entry.note}"</p>}
             <div className="text-[10px] text-tl-muted mt-0.5">{formatDate(entry.timestamp)}</div>
           </div>
         </div>
       ))}
+    </div>
+  )
+}
+
+// ─── Remediation record card ──────────────────────────────────────────────────
+
+function RemediationCard({
+  record,
+  projectId,
+  findingId,
+  onRetestDone,
+}: {
+  record: RemediationRecord
+  projectId: string
+  findingId: string
+  onRetestDone: () => void
+}) {
+  const [retesting, setRetesting] = useState(false)
+  const [retestNote, setRetestNote] = useState('')
+  const queryClient = useQueryClient()
+
+  const retestMutation = useMutation({
+    mutationFn: () => findingsApi.retest(projectId, findingId, record.id, retestNote || undefined),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['finding', projectId, findingId] })
+      queryClient.invalidateQueries({ queryKey: ['findings', projectId] })
+      setRetesting(false)
+      setRetestNote('')
+      onRetestDone()
+    },
+  })
+
+  const cfg = RETEST_STATUS_CONFIG[record.retest_status] ?? RETEST_STATUS_CONFIG.pending
+  const Icon = cfg.icon
+
+  return (
+    <div className="border border-tl-border rounded-lg p-4 space-y-3">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs text-tl-text2 flex-1">{record.description}</p>
+        <div className={`flex items-center gap-1 text-xs font-medium ${cfg.cls} flex-shrink-0`}>
+          <Icon size={12} />
+          <span>{cfg.label}</span>
+        </div>
+      </div>
+
+      {record.applied_by && (
+        <div className="text-[10px] text-tl-muted">Applied by: {record.applied_by}</div>
+      )}
+
+      {record.patch_diff && (
+        <pre className="text-[10px] font-mono text-tl-text2 bg-tl-bg border border-tl-border rounded p-2 overflow-x-auto max-h-24">
+          {record.patch_diff}
+        </pre>
+      )}
+
+      {record.retest_notes && (
+        <div className="text-xs text-tl-muted italic">{record.retest_notes}</div>
+      )}
+
+      {record.retest_at && (
+        <div className="text-[10px] text-tl-muted">Retested: {formatRelative(record.retest_at)}</div>
+      )}
+
+      {/* Retest controls */}
+      {record.retest_status !== 'passed' && (
+        <div>
+          <button
+            onClick={() => setRetesting((v) => !v)}
+            className="flex items-center gap-1.5 text-xs text-tl-blue hover:underline"
+          >
+            <RotateCcw size={11} />
+            {retesting ? 'Cancel' : 'Run Retest'}
+          </button>
+
+          {retesting && (
+            <div className="mt-2 space-y-2">
+              <input
+                type="text"
+                value={retestNote}
+                onChange={(e) => setRetestNote(e.target.value)}
+                placeholder="Optional note..."
+                className="w-full bg-tl-bg border border-tl-border rounded px-2 py-1.5 text-xs text-tl-text placeholder:text-tl-muted focus:outline-none focus:border-tl-blue"
+              />
+              <button
+                onClick={() => retestMutation.mutate()}
+                disabled={retestMutation.isPending}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-tl-blue text-white text-xs font-medium hover:bg-blue-500 transition-colors disabled:opacity-50"
+              >
+                {retestMutation.isPending ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
+                Run Retest Now
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -196,8 +292,15 @@ function HistoryTimeline({ history }: { history: FindingHistoryEntry[] }) {
 export default function FindingDetail() {
   const { id: projectId, findingId } = useParams<{ id: string; findingId: string }>()
   const queryClient = useQueryClient()
+
   const [statusNote, setStatusNote] = useState('')
   const [showStatusMenu, setShowStatusMenu] = useState(false)
+  const [showValidateMenu, setShowValidateMenu] = useState(false)
+  const [validateNote, setValidateNote] = useState('')
+  const [showAddRemediation, setShowAddRemediation] = useState(false)
+  const [remDesc, setRemDesc] = useState('')
+  const [remAppliedBy, setRemAppliedBy] = useState('')
+  const [remPatchDiff, setRemPatchDiff] = useState('')
 
   const { data: finding, isLoading, isError } = useQuery({
     queryKey: ['finding', projectId, findingId],
@@ -213,6 +316,34 @@ export default function FindingDetail() {
       queryClient.invalidateQueries({ queryKey: ['findings', projectId] })
       setShowStatusMenu(false)
       setStatusNote('')
+    },
+  })
+
+  const validateMutation = useMutation({
+    mutationFn: ({ confidence, note }: { confidence: string; note?: string }) =>
+      findingsApi.validate(projectId!, findingId!, confidence, note),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['finding', projectId, findingId] })
+      queryClient.invalidateQueries({ queryKey: ['findings', projectId] })
+      setShowValidateMenu(false)
+      setValidateNote('')
+    },
+  })
+
+  const remediationMutation = useMutation({
+    mutationFn: () =>
+      findingsApi.createRemediation(projectId!, findingId!, {
+        description: remDesc,
+        applied_by: remAppliedBy || undefined,
+        patch_diff: remPatchDiff || undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['finding', projectId, findingId] })
+      queryClient.invalidateQueries({ queryKey: ['findings', projectId] })
+      setShowAddRemediation(false)
+      setRemDesc('')
+      setRemAppliedBy('')
+      setRemPatchDiff('')
     },
   })
 
@@ -296,9 +427,9 @@ export default function FindingDetail() {
             </Section>
           )}
 
-          {/* Remediation */}
+          {/* Remediation guidance */}
           {finding.remediation && (
-            <Section title="Remediation">
+            <Section title="Remediation Guidance">
               <p className="text-sm text-tl-text2 leading-relaxed">{finding.remediation}</p>
             </Section>
           )}
@@ -313,6 +444,116 @@ export default function FindingDetail() {
               </div>
             </Section>
           )}
+
+          {/* Validation */}
+          <Section title="Validation">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-tl-muted">Current confidence:</span>
+                <ConfidenceBadge confidence={finding.confidence} size="md" />
+                <button
+                  onClick={() => setShowValidateMenu((v) => !v)}
+                  className="text-xs text-tl-blue hover:underline"
+                >
+                  {showValidateMenu ? 'Cancel' : 'Validate'}
+                </button>
+              </div>
+
+              {showValidateMenu && (
+                <div className="bg-tl-surface border border-tl-border rounded-lg p-4 space-y-3">
+                  <p className="text-xs text-tl-muted">Set confidence level based on your validation:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {CONFIDENCE_LEVELS.map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => validateMutation.mutate({ confidence: c, note: validateNote || undefined })}
+                        disabled={validateMutation.isPending}
+                        className="px-3 py-1.5 rounded-md bg-tl-surface2 hover:bg-tl-surface3 border border-tl-border text-xs text-tl-text2 transition-colors disabled:opacity-50"
+                      >
+                        {c === 'FALSE_POSITIVE' ? 'False Positive' : c}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    type="text"
+                    value={validateNote}
+                    onChange={(e) => setValidateNote(e.target.value)}
+                    placeholder="Validation note (optional)..."
+                    className="w-full bg-tl-bg border border-tl-border rounded-md px-3 py-2 text-xs text-tl-text placeholder:text-tl-muted focus:outline-none focus:border-tl-blue"
+                  />
+                </div>
+              )}
+            </div>
+          </Section>
+
+          {/* Remediation records */}
+          <Section title="Remediation Records">
+            <div className="space-y-3">
+              {(finding.remediation_records ?? []).map((rec) => (
+                <RemediationCard
+                  key={rec.id}
+                  record={rec}
+                  projectId={projectId!}
+                  findingId={findingId!}
+                  onRetestDone={() => {
+                    queryClient.invalidateQueries({ queryKey: ['finding', projectId, findingId] })
+                  }}
+                />
+              ))}
+
+              {/* Add remediation */}
+              {!showAddRemediation ? (
+                <button
+                  onClick={() => setShowAddRemediation(true)}
+                  className="flex items-center gap-1.5 text-xs text-tl-blue hover:underline"
+                >
+                  <PlusCircle size={12} />
+                  Record Remediation
+                </button>
+              ) : (
+                <div className="border border-tl-border rounded-lg p-4 space-y-3">
+                  <p className="text-xs font-medium text-tl-text2">Record a remediation</p>
+                  <textarea
+                    value={remDesc}
+                    onChange={(e) => setRemDesc(e.target.value)}
+                    placeholder="Describe what was fixed..."
+                    rows={3}
+                    className="w-full bg-tl-bg border border-tl-border rounded-md px-3 py-2 text-xs text-tl-text placeholder:text-tl-muted focus:outline-none focus:border-tl-blue resize-none"
+                  />
+                  <input
+                    type="text"
+                    value={remAppliedBy}
+                    onChange={(e) => setRemAppliedBy(e.target.value)}
+                    placeholder="Applied by (optional)..."
+                    className="w-full bg-tl-bg border border-tl-border rounded-md px-3 py-2 text-xs text-tl-text placeholder:text-tl-muted focus:outline-none focus:border-tl-blue"
+                  />
+                  <textarea
+                    value={remPatchDiff}
+                    onChange={(e) => setRemPatchDiff(e.target.value)}
+                    placeholder="Patch diff or code change (optional)..."
+                    rows={4}
+                    className="w-full bg-tl-bg border border-tl-border rounded-md px-3 py-2 text-xs font-mono text-tl-text placeholder:text-tl-muted focus:outline-none focus:border-tl-blue resize-none"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => remediationMutation.mutate()}
+                      disabled={!remDesc.trim() || remediationMutation.isPending}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-tl-blue text-white text-xs font-medium hover:bg-blue-500 transition-colors disabled:opacity-50"
+                    >
+                      {remediationMutation.isPending ? <Loader2 size={11} className="animate-spin" /> : null}
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setShowAddRemediation(false)}
+                      className="px-3 py-1.5 rounded text-xs text-tl-muted hover:text-tl-text2 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </Section>
 
           {/* Status lifecycle */}
           <Section title="Lifecycle">
@@ -334,9 +575,7 @@ export default function FindingDetail() {
                     {FINDING_STATUSES.filter((s) => s !== finding.status).map((s) => (
                       <button
                         key={s}
-                        onClick={() =>
-                          statusMutation.mutate({ status: s, note: statusNote || undefined })
-                        }
+                        onClick={() => statusMutation.mutate({ status: s, note: statusNote || undefined })}
                         disabled={statusMutation.isPending}
                         className="px-3 py-1.5 rounded-md bg-tl-surface2 hover:bg-tl-surface3 border border-tl-border text-xs text-tl-text2 transition-colors disabled:opacity-50"
                       >
@@ -348,7 +587,7 @@ export default function FindingDetail() {
                     type="text"
                     value={statusNote}
                     onChange={(e) => setStatusNote(e.target.value)}
-                    placeholder="Add a note (optional)…"
+                    placeholder="Add a note (optional)..."
                     className="w-full bg-tl-bg border border-tl-border rounded-md px-3 py-2 text-xs text-tl-text placeholder:text-tl-muted focus:outline-none focus:border-tl-blue"
                   />
                 </div>
@@ -364,10 +603,7 @@ export default function FindingDetail() {
           <div className="text-[11px] text-tl-muted space-y-0.5 pt-2 border-t border-tl-border">
             <div>Scanner: <span className="font-mono">{finding.scanner_id}</span></div>
             <div>First detected: {formatDate(finding.created_at)}</div>
-            <div>Scan run: <span className="font-mono">{finding.scan_run_id.slice(0, 12)}…</span></div>
-            {finding.fingerprint && (
-              <div>Fingerprint: <span className="font-mono">{(finding as any).fingerprint}</span></div>
-            )}
+            <div>Scan run: <span className="font-mono">{finding.scan_run_id.slice(0, 12)}...</span></div>
           </div>
         </div>
       </div>

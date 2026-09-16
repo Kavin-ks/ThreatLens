@@ -3,6 +3,7 @@ from app.models.scan import ScanRun, ScannerResult, ScanStatus
 from app.models.finding import Finding, FindingHistory, FindingStatus, Severity, Confidence, SecurityCategory
 from app.models.evidence import Evidence, EvidenceType
 from app.models.remediation import RemediationRecord, RetestStatus
+from app.models.report import SecurityReport, ReportFormat
 
 __all__ = [
     "Project",
@@ -10,4 +11,5 @@ __all__ = [
     "Finding", "FindingHistory", "FindingStatus", "Severity", "Confidence", "SecurityCategory",
     "Evidence", "EvidenceType",
     "RemediationRecord", "RetestStatus",
+    "SecurityReport", "ReportFormat",
 ]
