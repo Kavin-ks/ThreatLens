@@ -4,11 +4,16 @@ import type {
   Project,
   ProjectSummary,
   FindingSummary,
+  GlobalFindingSummary,
   Finding,
   ScanRun,
   ScannerInfo,
   SecurityReport,
   RemediationRecord,
+  AiAnalysis,
+  DashboardStats,
+  ProjectConfig,
+  CvssResult,
   HealthStatus,
 } from '../types'
 
@@ -103,6 +108,55 @@ export const reportsApi = {
     api.post<SecurityReport>(`/projects/${projectId}/reports`, data ?? {}).then((r) => r.data),
   downloadUrl: (projectId: string, reportId: string) =>
     `/api/v1/projects/${projectId}/reports/${reportId}/download`,
+}
+
+// ─── Findings: CVSS + AI analysis ─────────────────────────────────────────────
+
+export const findingAnalysisApi = {
+  setCvss: (projectId: string, findingId: string, vector: string) =>
+    api.post<CvssResult>(`/projects/${projectId}/findings/${findingId}/cvss`, { vector })
+      .then((r) => r.data),
+  runAiAnalysis: (projectId: string, findingId: string) =>
+    api.post<AiAnalysis>(`/projects/${projectId}/findings/${findingId}/analyze`)
+      .then((r) => r.data),
+  getAiAnalysis: (projectId: string, findingId: string) =>
+    api.get<AiAnalysis>(`/projects/${projectId}/findings/${findingId}/analyze`)
+      .then((r) => r.data),
+}
+
+// ─── Global findings ──────────────────────────────────────────────────────────
+
+export const globalFindingsApi = {
+  list: (filters?: {
+    severity?: string
+    status?: string
+    category?: string
+    confidence?: string
+    project_id?: string
+    search?: string
+  }) => api.get<GlobalFindingSummary[]>('/findings/', { params: filters }).then((r) => r.data),
+}
+
+// ─── Global scans ─────────────────────────────────────────────────────────────
+
+export const globalScansApi = {
+  list: (filters?: { status?: string; project_id?: string }) =>
+    api.get<ScanRun[]>('/scans/', { params: filters }).then((r) => r.data),
+}
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+
+export const dashboardApi = {
+  stats: () => api.get<DashboardStats>('/dashboard/stats').then((r) => r.data),
+}
+
+// ─── Scanner config ───────────────────────────────────────────────────────────
+
+export const scannerConfigApi = {
+  get: (projectId: string) =>
+    api.get<ProjectConfig>(`/projects/${projectId}/scanner-config`).then((r) => r.data),
+  update: (projectId: string, data: { enabled_scanners?: string[] | null; authorized_targets?: string[] }) =>
+    api.patch<ProjectConfig>(`/projects/${projectId}/scanner-config`, data).then((r) => r.data),
 }
 
 // ─── Scanners ─────────────────────────────────────────────────────────────────

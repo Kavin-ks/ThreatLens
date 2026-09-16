@@ -7,6 +7,7 @@ from app.core.database import get_db
 from app.models.project import Project
 from app.models.finding import Finding, FindingStatus, FindingHistory, Confidence
 from app.models.remediation import RemediationRecord, RetestStatus
+from app.models.ai_analysis import AiAnalysis
 from app.schemas.finding import FindingResponse, FindingStatusUpdate, FindingSummary
 from app.schemas.remediation import (
     RemediationRecordCreate,
@@ -15,6 +16,8 @@ from app.schemas.remediation import (
     RetestResponse,
     ValidateFindingRequest,
 )
+from app.schemas.ai_analysis import CvssUpdateRequest, CvssUpdateResponse, AiAnalysisResponse
+from app.services.ai_triage import run_ai_triage
 
 router = APIRouter()
 
@@ -57,6 +60,7 @@ def get_finding(project_id: str, finding_id: str, db: Session = Depends(get_db))
             selectinload(Finding.evidence),
             selectinload(Finding.history),
             selectinload(Finding.remediation_records),
+            selectinload(Finding.ai_analysis),
         )
         .where(Finding.id == finding_id, Finding.project_id == project_id)
     ).scalar_one_or_none()
@@ -81,6 +85,7 @@ def update_finding_status(
             selectinload(Finding.evidence),
             selectinload(Finding.history),
             selectinload(Finding.remediation_records),
+            selectinload(Finding.ai_analysis),
         )
         .where(Finding.id == finding_id, Finding.project_id == project_id)
     ).scalar_one_or_none()
@@ -122,6 +127,7 @@ def validate_finding(
             selectinload(Finding.evidence),
             selectinload(Finding.history),
             selectinload(Finding.remediation_records),
+            selectinload(Finding.ai_analysis),
         )
         .where(Finding.id == finding_id, Finding.project_id == project_id)
     ).scalar_one_or_none()
@@ -260,6 +266,78 @@ def retest_finding(
         notes=rec.retest_notes or "",
         remediation_id=remediation_id,
     )
+
+
+# ─── CVSS scoring ─────────────────────────────────────────────────────────────
+
+@router.post("/{finding_id}/cvss", response_model=CvssUpdateResponse)
+def update_cvss(
+    project_id: str,
+    finding_id: str,
+    payload: CvssUpdateRequest,
+    db: Session = Depends(get_db),
+):
+    """Calculate CVSS v3.1 base score from a vector string and persist it."""
+    _get_project_or_404(project_id, db)
+    finding = _get_finding_or_404(project_id, finding_id, db)
+
+    from app.utils.cvss import calculate_cvss31
+    try:
+        score, severity_label = calculate_cvss31(payload.vector)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+    finding.cvss_vector = payload.vector
+    finding.cvss_score = score
+    db.commit()
+
+    return CvssUpdateResponse(
+        cvss_vector=payload.vector,
+        cvss_score=score,
+        severity_label=severity_label,
+    )
+
+
+# ─── AI-assisted triage ───────────────────────────────────────────────────────
+
+@router.post("/{finding_id}/analyze", response_model=AiAnalysisResponse)
+def analyze_finding(
+    project_id: str,
+    finding_id: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Run AI-assisted triage on a finding.
+    Requires ENABLE_AI_TRIAGE=true and ANTHROPIC_API_KEY to be set.
+    Only operates on non-sensitive findings; clearly labels AI-generated content.
+    Never auto-confirms vulnerabilities.
+    """
+    _get_project_or_404(project_id, db)
+    finding = _get_finding_or_404(project_id, finding_id, db)
+
+    try:
+        analysis = run_ai_triage(db=db, finding=finding)
+    except (RuntimeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    return analysis
+
+
+@router.get("/{finding_id}/analyze", response_model=AiAnalysisResponse)
+def get_ai_analysis(
+    project_id: str,
+    finding_id: str,
+    db: Session = Depends(get_db),
+):
+    """Retrieve the existing AI analysis for a finding."""
+    _get_project_or_404(project_id, db)
+    _get_finding_or_404(project_id, finding_id, db)
+    analysis = db.execute(
+        select(AiAnalysis).where(AiAnalysis.finding_id == finding_id)
+    ).scalar_one_or_none()
+    if not analysis:
+        raise HTTPException(status_code=404, detail="No AI analysis for this finding")
+    return analysis
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────

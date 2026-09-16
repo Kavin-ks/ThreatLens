@@ -139,6 +139,20 @@ export interface SecurityReport {
   updated_at: string
 }
 
+export interface AiAnalysis {
+  id: string
+  finding_id: string
+  model_used: string
+  technical_explanation: string | null
+  impact_assessment: string | null
+  false_positive_likelihood: 'low' | 'medium' | 'high' | null
+  false_positive_reasoning: string | null
+  remediation_recommendation: string | null
+  analyst_summary: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface Finding {
   id: string
   project_id: string
@@ -156,12 +170,14 @@ export interface Finding {
   affected_endpoint: string | null
   cwe_id: string | null
   owasp_category: string | null
+  cvss_vector: string | null
   cvss_score: number | null
   impact: string | null
   remediation: string | null
   evidence: Evidence[]
   history: FindingHistoryEntry[]
   remediation_records: RemediationRecord[]
+  ai_analysis: AiAnalysis | null
   created_at: string
   updated_at: string
 }
@@ -188,6 +204,37 @@ export interface ScannerInfo {
   category: string
   requires_running_app: boolean
   cwe_ids: string[]
+}
+
+export interface GlobalFindingSummary extends FindingSummary {
+  project_id: string
+}
+
+export interface DashboardStats {
+  total_projects: number
+  active_projects: number
+  total_findings: number
+  confirmed_findings: number
+  resolved_findings: number
+  critical_findings: number
+  high_findings: number
+  total_scans: number
+  running_scans: number
+  severity_distribution: { CRITICAL: number; HIGH: number; MEDIUM: number; LOW: number; INFO: number }
+  status_distribution: Record<string, number>
+  recent_scans_count: number
+}
+
+export interface ProjectConfig {
+  project_id: string
+  enabled_scanners: string[] | null
+  authorized_targets: string[]
+}
+
+export interface CvssResult {
+  cvss_vector: string
+  cvss_score: number
+  severity_label: string
 }
 
 // ─── API response wrappers ────────────────────────────────────────────────────

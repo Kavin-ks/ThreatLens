@@ -3,6 +3,7 @@ from typing import Optional, List
 from pydantic import BaseModel
 from app.models.finding import Severity, Confidence, FindingStatus, SecurityCategory
 from app.models.remediation import RetestStatus
+from app.schemas.ai_analysis import AiAnalysisResponse
 
 
 class RemediationRecordSummary(BaseModel):
@@ -58,12 +59,14 @@ class FindingResponse(BaseModel):
     affected_endpoint: Optional[str]
     cwe_id: Optional[str]
     owasp_category: Optional[str]
+    cvss_vector: Optional[str]
     cvss_score: Optional[float]
     impact: Optional[str]
     remediation: Optional[str]
     evidence: List[EvidenceResponse] = []
     history: List[FindingHistoryEntry] = []
     remediation_records: List[RemediationRecordSummary] = []
+    ai_analysis: Optional[AiAnalysisResponse] = None
     created_at: datetime
     updated_at: datetime
 

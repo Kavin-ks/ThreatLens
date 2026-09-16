@@ -102,6 +102,9 @@ class Finding(UUIDMixin, TimestampMixin, Base):
     remediation_records: Mapped[List["RemediationRecord"]] = relationship(
         "RemediationRecord", back_populates="finding", cascade="all, delete-orphan"
     )
+    ai_analysis: Mapped[Optional["AiAnalysis"]] = relationship(
+        "AiAnalysis", back_populates="finding", cascade="all, delete-orphan", uselist=False
+    )
 
 
 class FindingHistory(UUIDMixin, Base):

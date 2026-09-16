@@ -19,14 +19,17 @@ import {
   RefreshCw,
   PlusCircle,
   RotateCcw,
+  Cpu,
+  Sparkles,
+  Hash,
 } from 'lucide-react'
 import { TopBar } from '../components/layout/TopBar'
 import { SeverityBadge } from '../components/common/SeverityBadge'
 import { ConfidenceBadge } from '../components/common/ConfidenceBadge'
 import { StatusBadge } from '../components/common/StatusBadge'
-import { findingsApi } from '../api/endpoints'
+import { findingsApi, findingAnalysisApi } from '../api/endpoints'
 import { formatDate, formatRelative } from '../lib/utils'
-import type { Evidence, FindingHistoryEntry, FindingStatus, Confidence, RemediationRecord } from '../types'
+import type { Evidence, FindingHistoryEntry, FindingStatus, Confidence, RemediationRecord, AiAnalysis } from '../types'
 
 const FINDING_STATUSES: FindingStatus[] = [
   'DETECTED', 'VALIDATING', 'CONFIRMED', 'REJECTED', 'REMEDIATION', 'RETESTING', 'RESOLVED',
@@ -434,6 +437,23 @@ export default function FindingDetail() {
             </Section>
           )}
 
+          {/* CVSS Score */}
+          <CvssPanel
+            projectId={projectId!}
+            findingId={findingId!}
+            currentVector={finding.cvss_vector}
+            currentScore={finding.cvss_score}
+            onUpdated={() => queryClient.invalidateQueries({ queryKey: ['finding', projectId, findingId] })}
+          />
+
+          {/* AI Triage */}
+          <AiAnalysisPanel
+            projectId={projectId!}
+            findingId={findingId!}
+            existing={finding.ai_analysis}
+            onUpdated={() => queryClient.invalidateQueries({ queryKey: ['finding', projectId, findingId] })}
+          />
+
           {/* Evidence */}
           {finding.evidence.length > 0 && (
             <Section title={`Evidence (${finding.evidence.length})`}>
@@ -616,6 +636,212 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     <div>
       <h3 className="text-xs font-semibold text-tl-muted uppercase tracking-wider mb-2">{title}</h3>
       {children}
+    </div>
+  )
+}
+
+// ─── CVSS panel ───────────────────────────────────────────────────────────────
+
+function CvssPanel({
+  projectId,
+  findingId,
+  currentVector,
+  currentScore,
+  onUpdated,
+}: {
+  projectId: string
+  findingId: string
+  currentVector: string | null
+  currentScore: number | null
+  onUpdated: () => void
+}) {
+  const [showInput, setShowInput] = useState(false)
+  const [vector, setVector] = useState(currentVector ?? '')
+  const [error, setError] = useState('')
+
+  const mutation = useMutation({
+    mutationFn: (v: string) => findingAnalysisApi.setCvss(projectId, findingId, v),
+    onSuccess: () => { setShowInput(false); setError(''); onUpdated() },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      setError(msg ?? 'Invalid vector')
+    },
+  })
+
+  const scoreColor =
+    currentScore == null ? 'text-tl-muted'
+    : currentScore >= 9.0 ? 'text-red-400'
+    : currentScore >= 7.0 ? 'text-orange-400'
+    : currentScore >= 4.0 ? 'text-amber-400'
+    : 'text-blue-400'
+
+  return (
+    <Section title="CVSS v3.1 Score">
+      <div className="space-y-3">
+        {currentScore != null ? (
+          <div className="flex items-center gap-3">
+            <span className={`text-3xl font-bold font-mono ${scoreColor}`}>
+              {currentScore.toFixed(1)}
+            </span>
+            {currentVector && (
+              <span className="text-xs font-mono text-tl-muted bg-tl-surface border border-tl-border rounded px-2 py-1 break-all">
+                {currentVector}
+              </span>
+            )}
+            <button onClick={() => { setShowInput((v) => !v); setVector(currentVector ?? '') }} className="text-xs text-tl-blue hover:underline">
+              {showInput ? 'Cancel' : 'Update'}
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Hash size={13} className="text-tl-muted" />
+            <span className="text-xs text-tl-muted">No CVSS score set</span>
+            <button onClick={() => setShowInput((v) => !v)} className="text-xs text-tl-blue hover:underline">
+              {showInput ? 'Cancel' : 'Calculate'}
+            </button>
+          </div>
+        )}
+
+        {showInput && (
+          <div className="space-y-2">
+            <input
+              type="text"
+              value={vector}
+              onChange={(e) => setVector(e.target.value)}
+              placeholder="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N"
+              className="w-full bg-tl-bg border border-tl-border rounded-md px-3 py-1.5 text-xs font-mono text-tl-text placeholder:text-tl-muted focus:outline-none focus:border-tl-blue"
+            />
+            {error && <p className="text-xs text-red-400">{error}</p>}
+            <button
+              onClick={() => mutation.mutate(vector)}
+              disabled={!vector.trim() || mutation.isPending}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-tl-blue text-white text-xs font-medium hover:bg-blue-500 transition-colors disabled:opacity-50"
+            >
+              {mutation.isPending ? <Loader2 size={11} className="animate-spin" /> : <Hash size={11} />}
+              Calculate Score
+            </button>
+          </div>
+        )}
+      </div>
+    </Section>
+  )
+}
+
+// ─── AI analysis panel ────────────────────────────────────────────────────────
+
+const FP_COLORS: Record<string, string> = {
+  low: 'text-emerald-400',
+  medium: 'text-amber-400',
+  high: 'text-red-400',
+}
+
+function AiAnalysisPanel({
+  projectId,
+  findingId,
+  existing,
+  onUpdated,
+}: {
+  projectId: string
+  findingId: string
+  existing: AiAnalysis | null
+  onUpdated: () => void
+}) {
+  const mutation = useMutation({
+    mutationFn: () => findingAnalysisApi.runAiAnalysis(projectId, findingId),
+    onSuccess: onUpdated,
+  })
+
+  return (
+    <Section title="AI-Assisted Triage">
+      <div className="space-y-3">
+        {/* Disclaimer */}
+        <div className="flex items-start gap-2 text-xs text-tl-muted bg-tl-surface2 border border-tl-border rounded p-2.5">
+          <Sparkles size={12} className="text-purple-400 mt-0.5 flex-shrink-0" />
+          <span>
+            AI-generated content — supplementary analysis only. Never used to auto-confirm findings.
+            Requires <code className="font-mono">ENABLE_AI_TRIAGE=true</code> and <code className="font-mono">ANTHROPIC_API_KEY</code>.
+          </span>
+        </div>
+
+        {!existing && (
+          <button
+            onClick={() => mutation.mutate()}
+            disabled={mutation.isPending}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-tl-surface border border-tl-border text-xs text-tl-text2 hover:bg-tl-surface2 transition-colors disabled:opacity-50"
+          >
+            {mutation.isPending ? <Loader2 size={11} className="animate-spin" /> : <Cpu size={11} className="text-purple-400" />}
+            {mutation.isPending ? 'Analyzing…' : 'Run AI Triage'}
+          </button>
+        )}
+
+        {mutation.isError && (
+          <p className="text-xs text-red-400">
+            {(mutation.error as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+              ?? 'AI triage unavailable — check ENABLE_AI_TRIAGE and ANTHROPIC_API_KEY.'}
+          </p>
+        )}
+
+        {existing && (
+          <div className="space-y-3 border border-tl-border rounded-lg p-4 bg-tl-surface">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs text-purple-400">
+                <Sparkles size={11} />
+                <span className="font-medium">AI Analysis</span>
+                <span className="text-tl-muted">· {existing.model_used}</span>
+              </div>
+              <button
+                onClick={() => mutation.mutate()}
+                disabled={mutation.isPending}
+                className="text-xs text-tl-blue hover:underline"
+              >
+                Refresh
+              </button>
+            </div>
+
+            {existing.analyst_summary && (
+              <div className="bg-tl-surface2 rounded p-3">
+                <p className="text-xs font-medium text-tl-text mb-1">Summary</p>
+                <p className="text-xs text-tl-text2 leading-relaxed">{existing.analyst_summary}</p>
+              </div>
+            )}
+
+            {existing.false_positive_likelihood && (
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-tl-muted">False positive likelihood:</span>
+                <span className={`font-medium ${FP_COLORS[existing.false_positive_likelihood] ?? 'text-tl-muted'}`}>
+                  {existing.false_positive_likelihood.toUpperCase()}
+                </span>
+                {existing.false_positive_reasoning && (
+                  <span className="text-tl-muted">— {existing.false_positive_reasoning}</span>
+                )}
+              </div>
+            )}
+
+            {existing.technical_explanation && (
+              <AiSection label="Technical Explanation" text={existing.technical_explanation} />
+            )}
+            {existing.impact_assessment && (
+              <AiSection label="Impact Assessment" text={existing.impact_assessment} />
+            )}
+            {existing.remediation_recommendation && (
+              <AiSection label="AI Remediation Recommendation" text={existing.remediation_recommendation} />
+            )}
+
+            <div className="text-[10px] text-tl-muted border-t border-tl-border pt-2">
+              Generated {formatRelative(existing.created_at)} · This is AI-generated content. Verify independently before acting.
+            </div>
+          </div>
+        )}
+      </div>
+    </Section>
+  )
+}
+
+function AiSection({ label, text }: { label: string; text: string }) {
+  return (
+    <div>
+      <p className="text-[10px] font-semibold text-tl-muted uppercase tracking-wide mb-0.5">{label}</p>
+      <p className="text-xs text-tl-text2 leading-relaxed">{text}</p>
     </div>
   )
 }

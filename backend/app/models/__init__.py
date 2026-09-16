@@ -4,6 +4,8 @@ from app.models.finding import Finding, FindingHistory, FindingStatus, Severity,
 from app.models.evidence import Evidence, EvidenceType
 from app.models.remediation import RemediationRecord, RetestStatus
 from app.models.report import SecurityReport, ReportFormat
+from app.models.ai_analysis import AiAnalysis
+from app.models.project_config import ProjectConfig
 
 __all__ = [
     "Project",
@@ -12,4 +14,6 @@ __all__ = [
     "Evidence", "EvidenceType",
     "RemediationRecord", "RetestStatus",
     "SecurityReport", "ReportFormat",
+    "AiAnalysis",
+    "ProjectConfig",
 ]

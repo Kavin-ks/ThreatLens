@@ -7,6 +7,9 @@ import NewProject from './pages/NewProject'
 import ProjectDetail from './pages/ProjectDetail'
 import ScanDetail from './pages/ScanDetail'
 import FindingDetail from './pages/FindingDetail'
+import GlobalFindings from './pages/GlobalFindings'
+import GlobalScans from './pages/GlobalScans'
+import Scanners from './pages/Scanners'
 import NotFound from './pages/NotFound'
 
 const router = createBrowserRouter([
@@ -20,10 +23,10 @@ const router = createBrowserRouter([
       { path: 'projects/:id', element: <ProjectDetail /> },
       { path: 'projects/:id/scans/:scanId', element: <ScanDetail /> },
       { path: 'projects/:id/findings/:findingId', element: <FindingDetail /> },
-      { path: 'findings', element: <Dashboard /> },  // Global: falls back to dashboard
-      { path: 'scans', element: <Dashboard /> },
-      { path: 'reports', element: <Dashboard /> },   // Phase 6
-      { path: 'scanners', element: <Dashboard /> },
+      { path: 'findings', element: <GlobalFindings /> },
+      { path: 'scans', element: <GlobalScans /> },
+      { path: 'reports', element: <Dashboard /> },
+      { path: 'scanners', element: <Scanners /> },
       { path: 'settings', element: <Dashboard /> },
     ],
   },

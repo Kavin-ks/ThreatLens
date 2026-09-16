@@ -12,3 +12,4 @@ python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.18
 fpdf2==2.8.8
+anthropic>=0.40.0

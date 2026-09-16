@@ -30,3 +30,6 @@ class Project(UUIDMixin, TimestampMixin, Base):
     findings: Mapped[List["Finding"]] = relationship(
         "Finding", back_populates="project", cascade="all, delete-orphan", lazy="select"
     )
+    scanner_config: Mapped[Optional["ProjectConfig"]] = relationship(
+        "ProjectConfig", back_populates="project", cascade="all, delete-orphan", uselist=False
+    )
