@@ -17,6 +17,17 @@ class EvidenceResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class FindingHistoryEntry(BaseModel):
+    id: str
+    from_status: Optional[str]
+    to_status: str
+    changed_by: str
+    note: Optional[str]
+    timestamp: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class FindingResponse(BaseModel):
     id: str
     project_id: str
@@ -38,6 +49,7 @@ class FindingResponse(BaseModel):
     impact: Optional[str]
     remediation: Optional[str]
     evidence: List[EvidenceResponse] = []
+    history: List[FindingHistoryEntry] = []
     created_at: datetime
     updated_at: datetime
 
@@ -51,12 +63,15 @@ class FindingStatusUpdate(BaseModel):
 
 class FindingSummary(BaseModel):
     id: str
+    scan_run_id: str
     title: str
     category: str
     severity: str
     confidence: str
     status: str
     affected_file: Optional[str]
+    affected_endpoint: Optional[str]
+    affected_component: Optional[str]
     scanner_id: str
     created_at: datetime
 

@@ -60,6 +60,16 @@ export interface ProjectSummary {
   created_at: string
 }
 
+export interface ScannerResult {
+  id: string
+  scanner_id: string
+  status: string
+  raw_finding_count: number
+  confirmed_finding_count: number
+  duration_ms: number | null
+  error_message: string | null
+}
+
 export interface ScanRun {
   id: string
   project_id: string
@@ -70,6 +80,14 @@ export interface ScanRun {
   celery_task_id: string | null
   created_at: string
   updated_at: string
+  scanner_results: ScannerResult[]
+}
+
+export interface ScanSummary {
+  total_raw: number
+  total_confirmed: number
+  by_severity: Record<string, number>
+  scanner_count: number
 }
 
 export interface Evidence {
@@ -81,6 +99,15 @@ export interface Evidence {
   title: string | null
   description: string | null
   created_at: string
+}
+
+export interface FindingHistoryEntry {
+  id: string
+  from_status: string | null
+  to_status: string
+  changed_by: string
+  note: string | null
+  timestamp: string
 }
 
 export interface Finding {
@@ -104,20 +131,33 @@ export interface Finding {
   impact: string | null
   remediation: string | null
   evidence: Evidence[]
+  history: FindingHistoryEntry[]
   created_at: string
   updated_at: string
 }
 
 export interface FindingSummary {
   id: string
+  scan_run_id: string
   title: string
   category: SecurityCategory
   severity: Severity
   confidence: Confidence
   status: FindingStatus
   affected_file: string | null
+  affected_endpoint: string | null
+  affected_component: string | null
   scanner_id: string
   created_at: string
+}
+
+export interface ScannerInfo {
+  scanner_id: string
+  name: string
+  description: string
+  category: string
+  requires_running_app: boolean
+  cwe_ids: string[]
 }
 
 // ─── API response wrappers ────────────────────────────────────────────────────

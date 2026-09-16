@@ -8,6 +8,18 @@ class ScanTriggerRequest(BaseModel):
     options: Optional[dict] = None
 
 
+class ScannerResultResponse(BaseModel):
+    id: str
+    scanner_id: str
+    status: str
+    raw_finding_count: int
+    confirmed_finding_count: int
+    duration_ms: Optional[int]
+    error_message: Optional[str]
+
+    model_config = {"from_attributes": True}
+
+
 class ScanRunResponse(BaseModel):
     id: str
     project_id: str
@@ -18,17 +30,6 @@ class ScanRunResponse(BaseModel):
     celery_task_id: Optional[str]
     created_at: datetime
     updated_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
-class ScannerResultResponse(BaseModel):
-    id: str
-    scanner_id: str
-    status: str
-    raw_finding_count: int
-    confirmed_finding_count: int
-    duration_ms: Optional[int]
-    error_message: Optional[str]
+    scanner_results: List[ScannerResultResponse] = []
 
     model_config = {"from_attributes": True}

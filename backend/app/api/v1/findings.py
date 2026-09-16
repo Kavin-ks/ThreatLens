@@ -18,6 +18,7 @@ def list_findings(
     status: Optional[str] = Query(None),
     category: Optional[str] = Query(None),
     confidence: Optional[str] = Query(None),
+    scan_id: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
     _get_project_or_404(project_id, db)
@@ -30,6 +31,8 @@ def list_findings(
         query = query.where(Finding.category == category)
     if confidence:
         query = query.where(Finding.confidence == confidence)
+    if scan_id:
+        query = query.where(Finding.scan_run_id == scan_id)
     query = query.order_by(Finding.created_at.desc())
     findings = db.execute(query).scalars().all()
     return findings
@@ -40,7 +43,10 @@ def get_finding(project_id: str, finding_id: str, db: Session = Depends(get_db))
     _get_project_or_404(project_id, db)
     finding = db.execute(
         select(Finding)
-        .options(selectinload(Finding.evidence))
+        .options(
+            selectinload(Finding.evidence),
+            selectinload(Finding.history),
+        )
         .where(Finding.id == finding_id, Finding.project_id == project_id)
     ).scalar_one_or_none()
     if not finding:
@@ -59,7 +65,10 @@ def update_finding_status(
     _get_project_or_404(project_id, db)
     finding = db.execute(
         select(Finding)
-        .options(selectinload(Finding.evidence))
+        .options(
+            selectinload(Finding.evidence),
+            selectinload(Finding.history),
+        )
         .where(Finding.id == finding_id, Finding.project_id == project_id)
     ).scalar_one_or_none()
     if not finding:

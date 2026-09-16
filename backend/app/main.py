@@ -9,10 +9,11 @@ from app.api.v1.router import api_v1_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # On startup: create tables if they don't exist (dev convenience)
     init_db()
+    # Pre-load scanner registry so the /scanners endpoint is populated immediately
+    from scanners.registry import scanner_registry
+    scanner_registry.autodiscover()
     yield
-    # On shutdown: nothing to tear down for now
 
 
 app = FastAPI(

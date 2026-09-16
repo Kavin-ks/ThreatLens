@@ -1,6 +1,14 @@
 import axios from 'axios'
 import { api } from './client'
-import type { Project, ProjectSummary, FindingSummary, Finding, ScanRun, HealthStatus } from '../types'
+import type {
+  Project,
+  ProjectSummary,
+  FindingSummary,
+  Finding,
+  ScanRun,
+  ScannerInfo,
+  HealthStatus,
+} from '../types'
 
 // ─── Health ───────────────────────────────────────────────────────────────────
 
@@ -27,10 +35,12 @@ export const projectsApi = {
 export const scansApi = {
   list: (projectId: string) =>
     api.get<ScanRun[]>(`/projects/${projectId}/scans/`).then((r) => r.data),
-  trigger: (projectId: string, scannerIds?: string[]) =>
-    api.post<ScanRun>(`/projects/${projectId}/scans/`, {
-      scanner_ids: scannerIds ?? null,
-    }).then((r) => r.data),
+  trigger: (projectId: string, scannerIds?: string[] | null) =>
+    api
+      .post<ScanRun>(`/projects/${projectId}/scans/`, {
+        scanner_ids: scannerIds ?? null,
+      })
+      .then((r) => r.data),
   get: (projectId: string, scanId: string) =>
     api.get<ScanRun>(`/projects/${projectId}/scans/${scanId}`).then((r) => r.data),
 }
@@ -38,7 +48,16 @@ export const scansApi = {
 // ─── Findings ─────────────────────────────────────────────────────────────────
 
 export const findingsApi = {
-  list: (projectId: string, filters?: { severity?: string; status?: string; category?: string }) =>
+  list: (
+    projectId: string,
+    filters?: {
+      severity?: string
+      status?: string
+      category?: string
+      confidence?: string
+      scan_id?: string
+    }
+  ) =>
     api
       .get<FindingSummary[]>(`/projects/${projectId}/findings/`, { params: filters })
       .then((r) => r.data),
@@ -48,4 +67,10 @@ export const findingsApi = {
     api
       .patch<Finding>(`/projects/${projectId}/findings/${findingId}/status`, { status, note })
       .then((r) => r.data),
+}
+
+// ─── Scanners ─────────────────────────────────────────────────────────────────
+
+export const scannersApi = {
+  list: () => api.get<ScannerInfo[]>('/scanners/').then((r) => r.data),
 }
