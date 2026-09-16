@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+*.cover
+
+# Environment
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Database
+*.db
+*.sqlite3
+threatlens.db
+
+# Evidence store (contains sensitive test data)
+evidence_store/
+
+# Node
+node_modules/
+dist/
+.vite/
+.eslintcache
+
+# IDEs
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Docker
+.docker/
+
+# Alembic
+# Keep versions directory but ignore compiled
+backend/alembic/versions/*.pyc
+
+# Logs
+*.log
+logs/
+
+# Reports output
+reports/output/
