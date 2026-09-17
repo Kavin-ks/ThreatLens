@@ -26,7 +26,7 @@ export default {
           'blue':      '#3B82F6',
           'blue2':     '#1D4ED8',
           'blue-dim':  '#1E3A5F',
-          // Severity
+          // Severity (constant across themes)
           'critical':  '#EF4444',
           'high':      '#F97316',
           'medium':    '#F59E0B',
@@ -41,7 +41,13 @@ export default {
       },
       animation: {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-      }
+        'fade-in':    'fadeIn 0.2s ease-out',
+        'slide-in':   'slideIn 0.2s ease-out',
+      },
+      keyframes: {
+        fadeIn:  { from: { opacity: '0' },              to: { opacity: '1' } },
+        slideIn: { from: { opacity: '0', transform: 'translateY(-4px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
+      },
     },
   },
   plugins: [],

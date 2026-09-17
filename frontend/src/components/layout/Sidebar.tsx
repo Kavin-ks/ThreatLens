@@ -9,6 +9,7 @@ import {
   Settings,
   ChevronRight,
   Crosshair,
+  HelpCircle,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
@@ -40,6 +41,12 @@ const navSections: { heading?: string; items: NavItem[] }[] = [
       { label: 'Settings', to: '/settings', icon: Settings },
     ],
   },
+  {
+    heading: 'Support',
+    items: [
+      { label: 'Help & Guide', to: '/help', icon: HelpCircle },
+    ],
+  },
 ]
 
 export function Sidebar() {
@@ -49,14 +56,14 @@ export function Sidebar() {
     <aside className="flex flex-col w-60 min-w-60 h-screen bg-tl-surface border-r border-tl-border overflow-y-auto">
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-4 py-5 border-b border-tl-border">
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-tl-blue bg-opacity-20 border border-tl-blue border-opacity-30">
+        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-tl-blue/20 border border-tl-blue/30">
           <Crosshair size={16} className="text-tl-blue" />
         </div>
         <div>
           <span className="font-semibold text-tl-text font-mono tracking-tight text-sm">
             ThreatLens
           </span>
-          <div className="text-[10px] text-tl-muted font-mono">v0.1.0</div>
+          <div className="text-[10px] text-tl-muted font-mono">v1.0.0</div>
         </div>
       </div>
 
@@ -81,7 +88,7 @@ export function Sidebar() {
                     className={cn(
                       'flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors group',
                       isActive
-                        ? 'bg-tl-blue bg-opacity-15 text-tl-blue font-medium'
+                        ? 'bg-tl-blue/15 text-tl-blue font-medium'
                         : 'text-tl-text3 hover:text-tl-text2 hover:bg-tl-surface2'
                     )}
                   >

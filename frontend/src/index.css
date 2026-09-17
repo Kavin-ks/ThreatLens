@@ -2,16 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    color-scheme: dark;
-  }
+/* ── Base ──────────────────────────────────────────────────────────────────── */
 
+@layer base {
   html, body {
     @apply bg-tl-bg text-tl-text;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.2s ease, color 0.15s ease;
   }
 
   * {
@@ -19,24 +18,127 @@
     scrollbar-color: #374151 transparent;
   }
 
-  ::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
-  }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
     @apply bg-tl-border rounded-full;
   }
+
+  :focus-visible {
+    outline: 2px solid #3B82F6;
+    outline-offset: 2px;
+  }
 }
+
+/* ── Components ────────────────────────────────────────────────────────────── */
 
 @layer components {
   .code-block {
     @apply font-mono text-sm bg-tl-bg border border-tl-border rounded-lg p-4 overflow-x-auto;
   }
-
   .section-header {
     @apply text-xs font-semibold uppercase tracking-widest text-tl-muted;
   }
+  .tl-input {
+    @apply text-sm bg-tl-surface border border-tl-border rounded-md px-3 py-1.5
+           text-tl-text placeholder:text-tl-muted
+           focus:outline-none focus:ring-1 focus:ring-tl-blue transition-colors;
+  }
+  .tl-btn-primary {
+    @apply flex items-center gap-1.5 px-3 py-1.5 rounded-md
+           bg-tl-blue text-white text-xs font-medium
+           hover:bg-tl-blue2 active:scale-95 transition-all duration-150;
+  }
+  .tl-btn-secondary {
+    @apply flex items-center gap-1.5 px-3 py-1.5 rounded-md
+           bg-tl-surface2 text-tl-text2 text-xs font-medium border border-tl-border
+           hover:bg-tl-surface3 hover:text-tl-text active:scale-95 transition-all duration-150;
+  }
+  .tl-card {
+    @apply bg-tl-surface border border-tl-border rounded-lg transition-colors duration-150;
+  }
+}
+
+/* ── Light theme overrides ─────────────────────────────────────────────────── *
+ * Applied via :root.light — higher specificity than plain utility classes,    *
+ * so no !important needed. Vite HMR picks this up without a server restart.  *
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+:root.light {
+  color-scheme: light;
+}
+
+/* backgrounds */
+:root.light html,
+:root.light body,
+:root.light .bg-tl-bg          { background-color: #F8FAFC; }
+:root.light .bg-tl-surface      { background-color: #FFFFFF; }
+:root.light .bg-tl-surface2     { background-color: #F1F5F9; }
+:root.light .bg-tl-surface3     { background-color: #E2E8F0; }
+
+/* hover backgrounds */
+:root.light .hover\:bg-tl-surface2:hover { background-color: #F1F5F9; }
+:root.light .hover\:bg-tl-surface3:hover { background-color: #E2E8F0; }
+:root.light .hover\:bg-tl-surface:hover  { background-color: #FFFFFF; }
+
+/* borders */
+:root.light .border-tl-border  { border-color: #CBD5E1; }
+:root.light .border-tl-border2 { border-color: #94A3B8; }
+:root.light .divide-tl-border > * + * { border-color: #CBD5E1; }
+
+/* text */
+:root.light .text-tl-text      { color: #0F172A; }
+:root.light .text-tl-text2     { color: #334155; }
+:root.light .text-tl-text3     { color: #64748B; }
+:root.light .text-tl-muted     { color: #94A3B8; }
+
+/* group-hover text */
+:root.light .group:hover .group-hover\:text-tl-text  { color: #0F172A; }
+:root.light .group:hover .group-hover\:text-tl-text2 { color: #334155; }
+:root.light .group:hover .group-hover\:text-tl-text3 { color: #64748B; }
+
+/* blue accents (slightly deepened for light bg contrast) */
+:root.light .text-tl-blue      { color: #2563EB; }
+:root.light .bg-tl-blue        { background-color: #2563EB; }
+:root.light .border-tl-blue    { border-color: #2563EB; }
+
+/* blue/opacity combos (opacity-10, opacity-15, opacity-20) */
+:root.light .bg-opacity-10.bg-tl-blue,
+:root.light [class*="bg-tl-blue"][class*="bg-opacity-10"] { background-color: rgba(37,99,235,0.10); }
+:root.light .bg-opacity-15.bg-tl-blue,
+:root.light [class*="bg-tl-blue"][class*="bg-opacity-15"] { background-color: rgba(37,99,235,0.15); }
+:root.light .bg-opacity-20.bg-tl-blue,
+:root.light [class*="bg-tl-blue"][class*="bg-opacity-20"] { background-color: rgba(37,99,235,0.20); }
+:root.light [class*="bg-tl-blue"][class*="bg-opacity-30"] { background-color: rgba(37,99,235,0.30); }
+
+/* code-block in light mode */
+:root.light .code-block {
+  background-color: #F8FAFC;
+  border-color: #CBD5E1;
+  color: #0F172A;
+}
+
+/* form inputs */
+:root.light .tl-input,
+:root.light select.tl-input,
+:root.light input.tl-input {
+  background-color: #FFFFFF;
+  border-color: #CBD5E1;
+  color: #0F172A;
+}
+:root.light .tl-input::placeholder { color: #94A3B8; }
+
+/* select element used in Scanners page */
+:root.light select {
+  background-color: #FFFFFF;
+  color: #0F172A;
+  border-color: #CBD5E1;
+}
+
+/* scrollbar in light mode */
+:root.light * {
+  scrollbar-color: #CBD5E1 transparent;
+}
+:root.light ::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
 }
