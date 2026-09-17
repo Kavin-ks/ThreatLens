@@ -260,6 +260,29 @@ def retest_finding(
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Retest failed: {exc}")
 
+    # Manual resolution: when the scanner cannot run (inconclusive) but the
+    # assessor has independently verified the fix (e.g. via a PoC), allow
+    # them to mark the finding RESOLVED.  This models the real-world pentest
+    # workflow where a manual check substitutes for automated rescanning.
+    if retest_status == "inconclusive" and payload.manual_resolve:
+        rec.retest_status = "passed"
+        note = (payload.notes or "").strip()
+        rec.retest_notes = (
+            f"Manually resolved: fix independently verified by assessor. {note}"
+        ).strip()
+        rec.retest_at = datetime.now(timezone.utc)
+        old_status = finding.status
+        finding.status = FindingStatus.RESOLVED
+        db.add(FindingHistory(
+            finding_id=finding.id,
+            from_status=old_status,
+            to_status=FindingStatus.RESOLVED,
+            changed_by="manual_retest",
+            note=rec.retest_notes,
+        ))
+        db.commit()
+        retest_status = "passed"
+
     db.refresh(rec)
     return RetestResponse(
         retest_status=retest_status,

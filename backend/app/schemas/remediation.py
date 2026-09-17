@@ -30,6 +30,10 @@ class RemediationRecordResponse(BaseModel):
 
 class RetestRequest(BaseModel):
     notes: Optional[str] = None
+    # When True and the scanner returns inconclusive (e.g. scanner_id="manual"),
+    # record the fix as manually verified and resolve the finding.
+    # Only accepted when retest_status would otherwise be "inconclusive".
+    manual_resolve: bool = False
 
 
 class RetestResponse(BaseModel):
