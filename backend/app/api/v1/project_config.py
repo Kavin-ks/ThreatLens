@@ -57,10 +57,18 @@ def update_scanner_config(
         cfg = ProjectConfig(project_id=project_id)
         db.add(cfg)
 
-    if payload.enabled_scanners is not None:
-        cfg.enabled_scanners_json = json.dumps(payload.enabled_scanners)
-    if payload.authorized_targets is not None:
-        cfg.authorized_targets_json = json.dumps(payload.authorized_targets)
+    if "enabled_scanners" in payload.model_fields_set:
+        cfg.enabled_scanners_json = (
+            json.dumps(payload.enabled_scanners)
+            if payload.enabled_scanners is not None
+            else None
+        )
+    if "authorized_targets" in payload.model_fields_set:
+        cfg.authorized_targets_json = (
+            json.dumps(payload.authorized_targets)
+            if payload.authorized_targets is not None
+            else None
+        )
 
     db.commit()
     db.refresh(cfg)

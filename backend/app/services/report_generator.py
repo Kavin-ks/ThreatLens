@@ -5,10 +5,21 @@ Generates a professional assessment report suitable for SIH demonstration.
 import io
 import json
 import textwrap
+import unicodedata
 from datetime import datetime, timezone
 from typing import Optional
 
 from fpdf import FPDF
+
+
+def _safe(text: str) -> str:
+    """Normalise and strip non-Latin-1 characters so fpdf2's built-in fonts accept the text."""
+    if not text:
+        return ""
+    # NFKD decomposition maps many accented / special chars to base + combining
+    normalised = unicodedata.normalize("NFKD", str(text))
+    # Encode to latin-1, replacing anything that won't fit with '?'
+    return normalised.encode("latin-1", errors="replace").decode("latin-1")
 
 # --- colour palette -----------------------------------------------------------
 DARK_BG   = (15, 20, 30)
@@ -124,17 +135,17 @@ class ThreatLensReport(FPDF):
         else:
             self._text(*TEXT_PRI)
         self.set_font("Helvetica", "", 8)
-        self.cell(45, 5, key + ":", align="L")
+        self.cell(45, 5, _safe(key) + ":", align="L")
         self._text(*TEXT_PRI)
         self.set_font("Helvetica", "", 8)
-        self.multi_cell(125, 5, str(value))
+        self.multi_cell(125, 5, _safe(str(value)))
 
     # -- body paragraph -------------------------------------------------------
 
     def body_para(self, text: str):
         self._text(*TEXT_PRI)
         self.set_font("Helvetica", "", 8)
-        self.multi_cell(0, 5, str(text))
+        self.multi_cell(0, 5, _safe(str(text)))
         self.ln(2)
 
     # -- horizontal rule ------------------------------------------------------
@@ -184,12 +195,12 @@ def generate_pdf_report(
     :param title: override report title
     :returns: PDF bytes
     """
-    report_title = title or f"{project.name} - Security Assessment Report"
-    target_display = project.target_url or project.target_path or "Not specified"
+    report_title = _safe(title or f"{project.name} - Security Assessment Report")
+    target_display = _safe(project.target_url or project.target_path or "Not specified")
 
-    pdf = ThreatLensReport(project.name, target_display)
+    pdf = ThreatLensReport(_safe(project.name), target_display)
     pdf.set_author("ThreatLens")
-    pdf.set_title(report_title)
+    pdf.set_title(_safe(report_title))
 
     # -- Cover page ------------------------------------------------------------
     pdf.add_page()
@@ -433,7 +444,7 @@ def generate_pdf_report(
             pdf._text(*TEXT_PRI)
             pdf.set_font("Helvetica", "B", 9)
             pdf.set_xy(27, y_before + 1)
-            title_text = f"F{idx:02d}  {finding.title}"
+            title_text = f"F{idx:02d}  {_safe(finding.title or '')}"
             pdf.cell(100, 5, title_text[:80], align="L")
             # Chips
             pdf._chip(132, y_before + 2.5, sev, sev_color, width=22, height=5)
@@ -472,11 +483,11 @@ def generate_pdf_report(
                     ev_type = ev.evidence_type if isinstance(ev.evidence_type, str) else ev.evidence_type.value
                     pdf._text(*TEXT_MUT)
                     pdf.set_font("Helvetica", "B", 7)
-                    pdf.cell(0, 4, f"[{ev_type.upper()}]  {ev.title or ''}", align="L")
+                    pdf.cell(0, 4, _safe(f"[{ev_type.upper()}]  {ev.title or ''}"), align="L")
                     pdf.ln(4)
                     if ev.content:
                         # Show first 400 chars of evidence content in monospaced style
-                        content_preview = ev.content[:400]
+                        content_preview = _safe(ev.content[:400])
                         if len(ev.content) > 400:
                             content_preview += "\n... (truncated)"
                         pdf._draw_rect(20, pdf.get_y(), 170, 4, *SURFACE)
@@ -486,7 +497,7 @@ def generate_pdf_report(
                         # Wrap lines
                         for line in content_preview.split("\n")[:8]:
                             pdf.set_x(23)
-                            pdf.cell(164, 3.5, line[:120], align="L")
+                            pdf.cell(164, 3.5, _safe(line[:120]), align="L")
                             pdf.ln(3.5)
                     pdf.ln(2)
 
