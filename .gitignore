@@ -28,8 +28,10 @@ coverage.xml
 
 # Database
 *.db
+*.db-shm
+*.db-wal
 *.sqlite3
-threatlens.db
+threatlens.db*
 
 # Evidence store (contains sensitive test data)
 evidence_store/
