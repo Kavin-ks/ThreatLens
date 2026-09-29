@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { api } from './client'
+import { api, getBaseApiUrl } from './client'
 import type {
   Project,
   ProjectSummary,
@@ -20,7 +20,11 @@ import type {
 // ─── Health ───────────────────────────────────────────────────────────────────
 
 export const healthApi = {
-  check: () => axios.get<HealthStatus>('/health').then((r) => r.data),
+  check: () => {
+    const base = getBaseApiUrl()
+    const url = base ? `${base}/health` : '/health'
+    return axios.get<HealthStatus>(url).then((r) => r.data)
+  },
 }
 
 // ─── Projects ─────────────────────────────────────────────────────────────────
