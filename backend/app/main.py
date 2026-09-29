@@ -13,6 +13,9 @@ async def lifespan(app: FastAPI):
     # Pre-load scanner registry so the /scanners endpoint is populated immediately
     from scanners.registry import scanner_registry
     scanner_registry.autodiscover()
+    # Seed default projects (ThreatLens & LedgerLens) for instant demonstration / Render deployment
+    from app.services.seed_service import seed_initial_projects
+    seed_initial_projects()
     yield
 
 

@@ -23,6 +23,7 @@ import { SeverityBadge } from '../components/common/SeverityBadge'
 import { StatusBadge } from '../components/common/StatusBadge'
 import { ConfidenceBadge } from '../components/common/ConfidenceBadge'
 import { EmptyState } from '../components/common/EmptyState'
+import { SAMPLE_PROJECT_DETAILS } from '../lib/sampleProjects'
 import { projectsApi, scansApi, findingsApi, reportsApi } from '../api/endpoints'
 import { formatRelative, formatDate } from '../lib/utils'
 import type { ScanStatus, Severity } from '../types'
@@ -64,11 +65,14 @@ export default function ProjectDetail() {
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
 
-  const { data: project, isLoading: projLoading, isError: projError } = useQuery({
+  const { data: serverProject, isLoading: projLoading, isError: projError } = useQuery({
     queryKey: ['project', id],
     queryFn: () => projectsApi.get(id!),
     enabled: !!id,
   })
+
+  const fallbackProject = id ? SAMPLE_PROJECT_DETAILS[id] : undefined
+  const project = serverProject || fallbackProject
 
   const { data: scans = [] } = useQuery({
     queryKey: ['scans', id],
@@ -107,7 +111,7 @@ export default function ProjectDetail() {
     triggerMutation.mutate()
   }
 
-  if (projLoading) {
+  if (projLoading && !project) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 size={20} className="animate-spin text-tl-muted" />
@@ -115,7 +119,7 @@ export default function ProjectDetail() {
     )
   }
 
-  if (projError || !project) {
+  if ((projError || !project) && !fallbackProject) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-3">
         <AlertCircle size={24} className="text-red-400" />

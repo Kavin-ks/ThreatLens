@@ -17,6 +17,7 @@ import { EmptyState } from '../components/common/EmptyState'
 import { SeverityBadge } from '../components/common/SeverityBadge'
 import { formatRelative } from '../lib/utils'
 import { projectsApi, dashboardApi } from '../api/endpoints'
+import { SAMPLE_PROJECTS } from '../lib/sampleProjects'
 import type { ProjectSummary } from '../types'
 
 function StatCard({
@@ -173,10 +174,12 @@ function ProjectRow({ project }: { project: ProjectSummary }) {
 }
 
 export default function Dashboard() {
-  const { data: projects = [], isLoading: projectsLoading, isError } = useQuery({
+  const { data: serverProjects = [], isLoading: projectsLoading, isError } = useQuery({
     queryKey: ['projects'],
     queryFn: projectsApi.list,
   })
+
+  const projects = serverProjects.length > 0 ? serverProjects : SAMPLE_PROJECTS
 
   const { data: stats } = useQuery({
     queryKey: ['dashboard-stats'],

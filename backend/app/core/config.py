@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     # Feature flags
     ENABLE_DYNAMIC_SCANNING: bool = False
     ENABLE_AI_TRIAGE: bool = False
+    ENABLE_CELERY: bool = False
 
 
 settings = Settings()

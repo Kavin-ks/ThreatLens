@@ -6,12 +6,16 @@ import { EmptyState } from '../components/common/EmptyState'
 import { SeverityBadge } from '../components/common/SeverityBadge'
 import { formatRelative } from '../lib/utils'
 import { projectsApi } from '../api/endpoints'
+import { SAMPLE_PROJECTS } from '../lib/sampleProjects'
 
 export default function Projects() {
-  const { data: projects = [], isLoading } = useQuery({
+  const { data: serverProjects = [], isLoading } = useQuery({
     queryKey: ['projects'],
     queryFn: projectsApi.list,
   })
+
+  // If server returns projects, use them; otherwise, display pre-seeded sample projects (e.g. Render cloud deployment)
+  const projects = serverProjects.length > 0 ? serverProjects : SAMPLE_PROJECTS
 
   return (
     <div className="flex flex-col h-full">

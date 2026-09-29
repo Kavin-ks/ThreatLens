@@ -62,6 +62,15 @@ class ScanOrchestrator:
         else:
             scanners = scanner_registry.for_target(target)
 
+        from app.core.config import settings
+        from scanners._dynamic_base import is_target_reachable
+        if not settings.ENABLE_DYNAMIC_SCANNING and not scanner_ids:
+            scanners = [s for s in scanners if not s.requires_running_app]
+        elif any(s.requires_running_app for s in scanners) and target.target_url:
+            if not is_target_reachable(target.target_url):
+                logger.warning("Target URL %s is unreachable; skipping dynamic scanners", target.target_url)
+                scanners = [s for s in scanners if not s.requires_running_app]
+
         logger.info("Running %d scanner(s) for scan_run=%s", len(scanners), scan_run.id)
 
         total_raw = 0

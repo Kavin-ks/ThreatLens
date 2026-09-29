@@ -2,6 +2,7 @@ from typing import List
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import select
+from app.core.config import settings
 from app.core.database import get_db
 from app.models.project import Project
 from app.models.scan import ScanRun, ScanStatus
@@ -53,16 +54,17 @@ def trigger_scan(
     db.commit()
     db.refresh(scan_run)
 
-    # Try Celery first; fall back to in-process BackgroundTasks.
+    # Try Celery if enabled; fall back to in-process BackgroundTasks.
     dispatched_celery = False
-    try:
-        from app.workers.scan_tasks import run_scan
-        task = run_scan.delay(scan_run.id)
-        scan_run.celery_task_id = task.id
-        db.commit()
-        dispatched_celery = True
-    except Exception:
-        pass
+    if settings.ENABLE_CELERY:
+        try:
+            from app.workers.scan_tasks import run_scan
+            task = run_scan.delay(scan_run.id)
+            scan_run.celery_task_id = task.id
+            db.commit()
+            dispatched_celery = True
+        except Exception:
+            pass
 
     if not dispatched_celery:
         from app.workers.scan_tasks import execute_scan

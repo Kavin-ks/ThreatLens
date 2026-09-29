@@ -60,6 +60,20 @@ def is_local_target(url: str) -> bool:
         return False
 
 
+def is_target_reachable(url: str, timeout: float = 2.0) -> bool:
+    """Return True if the target URL responds to an HTTP GET within timeout."""
+    if not is_local_target(url):
+        return False
+    try:
+        with httpx.Client(timeout=timeout, verify=False) as client:
+            client.get(url)
+            return True
+    except httpx.HTTPStatusError:
+        return True
+    except Exception:
+        return False
+
+
 class DynamicScanError(Exception):
     """Raised when a dynamic scanner cannot reach its target."""
 

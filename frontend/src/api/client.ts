@@ -18,7 +18,7 @@ const initialBase = getBaseApiUrl()
 export const api = axios.create({
   baseURL: initialBase ? `${initialBase}/api/v1` : '/api/v1',
   headers: { 'Content-Type': 'application/json' },
-  timeout: 30_000,
+  timeout: 60_000,
 })
 
 api.interceptors.request.use((config) => {
