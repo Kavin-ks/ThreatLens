@@ -13,7 +13,7 @@ import { cn } from '../lib/utils'
 
 function SettingSection({ title, icon: Icon, children }: {
   title: string
-  icon: React.ComponentType<{ size?: number; className?: string }>
+  icon: React.ComponentType<{ size?: number | string; className?: string }>
   children: React.ReactNode
 }) {
   return (

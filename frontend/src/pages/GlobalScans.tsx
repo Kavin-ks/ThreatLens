@@ -9,7 +9,7 @@ import { globalScansApi, projectsApi } from '../api/endpoints'
 import { cn } from '../lib/utils'
 import type { ScanRun } from '../types'
 
-const STATUS_CONFIG: Record<string, { icon: React.ComponentType<{ size?: number; className?: string }>; color: string; label: string }> = {
+const STATUS_CONFIG: Record<string, { icon: React.ComponentType<{ size?: number | string; className?: string }>; color: string; label: string }> = {
   completed: { icon: CheckCircle2, color: 'text-emerald-400', label: 'Completed' },
   failed: { icon: XCircle, color: 'text-red-400', label: 'Failed' },
   running: { icon: Loader2, color: 'text-tl-blue', label: 'Running' },

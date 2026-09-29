@@ -16,7 +16,7 @@ import { cn } from '../../lib/utils'
 interface NavItem {
   label: string
   to: string
-  icon: React.ComponentType<{ className?: string; size?: number }>
+  icon: React.ComponentType<{ className?: string; size?: number | string }>
 }
 
 const navSections: { heading?: string; items: NavItem[] }[] = [
