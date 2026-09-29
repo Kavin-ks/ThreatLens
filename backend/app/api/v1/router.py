@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from app.api.v1 import projects, scans, findings, scanners, reports
-from app.api.v1 import global_findings, global_scans, dashboard, project_config
+from app.api.v1 import global_findings, global_scans, dashboard, project_config, global_reports
 
 api_v1_router = APIRouter()
 
@@ -12,4 +12,5 @@ api_v1_router.include_router(project_config.router, prefix="/projects/{project_i
 api_v1_router.include_router(scanners.router, prefix="/scanners", tags=["scanners"])
 api_v1_router.include_router(global_findings.router, prefix="/findings", tags=["global-findings"])
 api_v1_router.include_router(global_scans.router, prefix="/scans", tags=["global-scans"])
+api_v1_router.include_router(global_reports.router, prefix="/reports", tags=["global-reports"])
 api_v1_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])

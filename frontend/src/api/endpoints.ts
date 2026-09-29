@@ -108,6 +108,9 @@ export const findingsApi = {
 export const reportsApi = {
   list: (projectId: string) =>
     api.get<SecurityReport[]>(`/projects/${projectId}/reports`).then((r) => r.data),
+  globalList: (projectId?: string) =>
+    api.get<SecurityReport[]>('/reports', { params: projectId ? { project_id: projectId } : {} })
+      .then((r) => r.data),
   generate: (projectId: string, data?: { scan_run_id?: string; title?: string }) =>
     api.post<SecurityReport>(`/projects/${projectId}/reports`, data ?? {}).then((r) => r.data),
   downloadUrl: (projectId: string, reportId: string) =>

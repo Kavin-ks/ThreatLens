@@ -10,6 +10,7 @@ import FindingDetail from './pages/FindingDetail'
 import GlobalFindings from './pages/GlobalFindings'
 import GlobalScans from './pages/GlobalScans'
 import Scanners from './pages/Scanners'
+import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 import Help from './pages/Help'
 import NotFound from './pages/NotFound'
@@ -27,7 +28,7 @@ const router = createBrowserRouter([
       { path: 'projects/:id/findings/:findingId',             element: <FindingDetail /> },
       { path: 'findings',                                     element: <GlobalFindings /> },
       { path: 'scans',                                        element: <GlobalScans /> },
-      { path: 'reports',                                      element: <Dashboard /> },
+      { path: 'reports',                                      element: <Reports /> },
       { path: 'scanners',                                     element: <Scanners /> },
       { path: 'settings',                                     element: <Settings /> },
       { path: 'help',                                         element: <Help /> },
