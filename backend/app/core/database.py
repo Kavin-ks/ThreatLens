@@ -22,6 +22,9 @@ def _build_engine():
 
         return engine
 
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+
     return create_engine(url, pool_pre_ping=True)
 
 

@@ -1,0 +1,50 @@
+services:
+  # -------------------------------------------------------------
+  # Backend API Service (FastAPI)
+  # -------------------------------------------------------------
+  - type: web
+    name: threatlens-backend
+    env: docker
+    dockerContext: backend
+    dockerfilePath: backend/Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DEBUG
+        value: "false"
+      - key: APP_NAME
+        value: "ThreatLens"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: threatlens-db
+          property: connectionString
+      # Add frontend URL or allow wildcard/proxied origins
+      - key: CORS_ORIGINS
+        value: '["*"]'
+
+  # -------------------------------------------------------------
+  # Frontend Application (React + Vite + Nginx)
+  # -------------------------------------------------------------
+  - type: web
+    name: threatlens-frontend
+    env: docker
+    dockerContext: frontend
+    dockerfilePath: frontend/Dockerfile
+    plan: free
+    envVars:
+      - key: BACKEND_URL
+        fromService:
+          type: web
+          name: threatlens-backend
+          property: host
+
+databases:
+  # -------------------------------------------------------------
+  # Managed PostgreSQL Database
+  # -------------------------------------------------------------
+  - name: threatlens-db
+    plan: free
+    databaseName: threatlens
+    user: threatlens
